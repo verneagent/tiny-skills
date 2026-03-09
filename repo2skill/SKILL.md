@@ -77,5 +77,5 @@ Print a summary: what was installed, where it was linked, and whether the folder
 ## Notes
 
 - Never modify the source repo. This skill only reads from it.
-- If the source is a subdirectory of a parent folder with multiple skills, record the parent folder in the mapping.
+- Always record the skill's own source folder (the directory containing `SKILL.md`) in the mapping, not a parent directory.
 - Exclude `.git/`, `__pycache__/`, `.DS_Store`, and other common artifacts when copying.

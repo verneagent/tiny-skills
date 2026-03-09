@@ -51,11 +51,11 @@ Read `~/.refine-skill/folder-map.json` — a JSON object mapping skill names to 
 ```json
 {
   "handoff": "~/code/verneagent/handoff",
-  "repo2skill": "~/code/verneagent/tiny-skills"
+  "repo2skill": "~/code/verneagent/tiny-skills/repo2skill"
 }
 ```
 
-Values point to the folder containing the skill (which may be a repo root or a parent directory with multiple skills as subdirectories).
+Each value points directly to the skill's source folder (the directory containing `SKILL.md`).
 
 If the file doesn't exist or the skill isn't in it, ask the user where the source folder is. When they provide one, save it to the map for future use.
 
