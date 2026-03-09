@@ -1,0 +1,4 @@
+interface:
+  display_name: "Agent Instructions"
+  short_description: "Consolidate CLAUDE.md and AGENTS.md."
+  default_prompt: "Consolidate this repo's agent instructions so AGENTS.md is the canonical source of truth and CLAUDE.md redirects to it."
