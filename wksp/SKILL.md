@@ -25,27 +25,17 @@ The `pretrust` step writes to `~/.claude.json` which requires `dangerouslyDisabl
 
 The `osascript` command MUST also run with `dangerouslyDisableSandbox: true`.
 
-## Skill Path
-
-Before running any script from this skill, resolve the scripts directory once:
-
-```bash
-SKILL_DIR=$(python3 -c "import os; p='.claude/skills/wksp'; print(p if os.path.isdir(p) else os.path.expanduser('~/.claude/skills/wksp'))")
-```
-
-Use `$SKILL_DIR` wherever you see `.claude/skills/wksp` in the commands below.
-
 ## Workflow
 
 ### Step 1: Parse natural language and resolve folder path
 
 ```bash
-python3 -c "import sys; sys.path.insert(0, '$SKILL_DIR'); from wksp_ops import parse_spawn_command; path, model = parse_spawn_command('<ARG>'); print(f'{path} {model or \"\"}'.strip())"
+python3 -c "import sys; sys.path.insert(0, '~/.claude/skills/wksp'); from wksp_ops import parse_spawn_command; path, model = parse_spawn_command('<ARG>'); print(f'{path} {model or \"\"}'.strip())"
 ```
 
 Then resolve path:
 ```bash
-python3 $SKILL_DIR/wksp_ops.py resolve-spawn-path --arg '<PATH>'
+python3 ~/.claude/skills/wksp/wksp_ops.py resolve-spawn-path --arg '<PATH>'
 ```
 
 If multiple matches are returned, ask user to choose. If none, stop.
@@ -87,7 +77,7 @@ Parse `tool` and `model` from the selected value by splitting on `:` (first part
 ### Step 4: Pre-trust workspace
 
 ```bash
-python3 $SKILL_DIR/wksp_ops.py pretrust --path '<RESOLVED_PATH>'
+python3 ~/.claude/skills/wksp/wksp_ops.py pretrust --path '<RESOLVED_PATH>'
 ```
 
 This writes `~/.claude.json` and must run with `dangerouslyDisableSandbox: true`.
@@ -97,7 +87,7 @@ This writes `~/.claude.json` and must run with `dangerouslyDisableSandbox: true`
 Use `launch.py` to build the shell command and open a new terminal tab. The script auto-detects iTerm2 vs Terminal.app via the bundled AppleScript.
 
 ```bash
-python3 $SKILL_DIR/launch.py --path '<RESOLVED_PATH>' --tool '<TOOL>' [--model '<MODEL>'] [--handoff]
+python3 ~/.claude/skills/wksp/launch.py --path '<RESOLVED_PATH>' --tool '<TOOL>' [--model '<MODEL>'] [--handoff]
 ```
 
 Both tools accept `--model` for model selection. For the handoff prompt:
