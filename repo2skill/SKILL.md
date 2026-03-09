@@ -28,7 +28,7 @@ Find the skill source. Check in order:
 
 1. Explicit `source-path` argument
 2. `./<skill-name>/` in the current directory (if it contains `SKILL.md`)
-3. Source repo mapping in `~/.refine-skill/repo-map.json` (shared with refine-skill, reversed)
+3. Source folder mapping in `~/.refine-skill/folder-map.json` (shared with refine-skill, reversed)
 4. Ask the user
 
 ### Step 2: Validate
@@ -66,16 +66,16 @@ Run the fan-out script to create symlinks in all agent-facing directories:
 python3 ~/.agents/skills/adhoc-skill/scripts/fanout.py <name>
 ```
 
-### Step 6: Update repo mapping
+### Step 6: Update folder mapping
 
-If the source path is not already in `~/.refine-skill/repo-map.json`, add it so `refine-skill` can sync changes back later.
+If the source path is not already in `~/.refine-skill/folder-map.json`, add it so `refine-skill` can sync changes back later.
 
 ### Step 7: Report
 
-Print a summary: what was installed, where it was linked, and whether the repo mapping was updated.
+Print a summary: what was installed, where it was linked, and whether the folder mapping was updated.
 
 ## Notes
 
 - Never modify the source repo. This skill only reads from it.
-- If the source is a subdirectory of a git repo, record the repo root (not the subdirectory) in the repo mapping.
+- If the source is a subdirectory of a parent folder with multiple skills, record the parent folder in the mapping.
 - Exclude `.git/`, `__pycache__/`, `.DS_Store`, and other common artifacts when copying.

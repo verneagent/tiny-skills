@@ -1,12 +1,12 @@
 ---
 name: refine-skill
-description: Refine or improve an existing skill's code. Automatically syncs changes to the skill's local source repo when it's a user-level skill not tracked by the current project's git. Use when the user says "refine", "improve", or "fix" a skill.
+description: Refine or improve an existing skill's code. Automatically syncs changes to the skill's local source folder when it's a user-level skill not tracked by the current project's git. Use when the user says "refine", "improve", or "fix" a skill.
 allowed-tools: Bash, Read, Glob, Grep, Edit, Write, Agent
 ---
 
 # refine-skill
 
-Refine, improve, or fix an existing skill. When the skill lives outside the current project's git (e.g., under `~/.agents/skills/` or `~/.claude/skills/`), automatically sync changes back to its canonical source repo.
+Refine, improve, or fix an existing skill. When the skill lives outside the current project's git (e.g., under `~/.agents/skills/` or `~/.claude/skills/`), automatically sync changes back to its canonical source folder.
 
 ## Usage
 
@@ -34,28 +34,30 @@ git ls-files --error-unmatch <skill-path> 2>/dev/null
 ```
 
 - **Tracked**: Changes will be committed with the project. No extra sync needed.
-- **Not tracked**: This is a user-level skill. After making changes, sync to the local source repo (Step 4).
+- **Not tracked**: This is a user-level skill. After making changes, sync to the local source folder (Step 4).
 
 ### Step 3: Make the changes
 
 Read the relevant files, understand the current implementation, and apply the requested improvement.
 
-### Step 4: Sync to local source repo (user-level skills only)
+### Step 4: Sync to local source folder (user-level skills only)
 
-If the skill is not git-tracked, look up its **local source repo** from the mapping below and copy the changed files there.
+If the skill is not git-tracked, look up its **source folder** from the mapping below and copy the changed files there.
 
-#### Source Repo Mapping
+#### Source Folder Mapping
 
-Read `~/.refine-skill/repo-map.json` — a JSON object mapping skill names to local repo paths:
+Read `~/.refine-skill/folder-map.json` — a JSON object mapping skill names to their source folder paths:
 
 ```json
 {
   "handoff": "~/code/verneagent/handoff",
-  "my-skill": "~/code/my-skill"
+  "repo2skill": "~/code/verneagent/tiny-skills"
 }
 ```
 
-If the file doesn't exist or the skill isn't in it, ask the user where the local repo is. When they provide one, save it to the map for future use.
+Values point to the folder containing the skill (which may be a repo root or a parent directory with multiple skills as subdirectories).
+
+If the file doesn't exist or the skill isn't in it, ask the user where the source folder is. When they provide one, save it to the map for future use.
 
 #### Sync procedure
 
@@ -73,5 +75,5 @@ If the file doesn't exist or the skill isn't in it, ask the user where the local
 ## Notes
 
 - Always read the skill's SKILL.md before making changes to understand its architecture
-- When syncing to a source repo, file structure may differ between installed copy and source — match by filename, not path
-- Never auto-commit to the source repo. Just copy the files and let the user commit
+- When syncing to a source folder, file structure may differ between installed copy and source — match by filename, not path
+- Never auto-commit to the source folder. Just copy the files and let the user commit
