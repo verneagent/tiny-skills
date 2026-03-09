@@ -1,0 +1,10 @@
+{
+  "adhoc-skill": "~/code/verneagent/tiny-skills",
+  "agents-md": "~/code/verneagent/tiny-skills",
+  "handoff": "~/code/verneagent/handoff",
+  "lark-console": "~/code/verneagent/lark-console",
+  "lark-suite": "~/code/verneagent/lark-suite",
+  "multi-gh": "~/code/verneagent/tiny-skills",
+  "refine-skill": "~/code/verneagent/tiny-skills",
+  "repo2skill": "~/code/verneagent/tiny-skills"
+}
