@@ -46,11 +46,7 @@ If the skill is not git-tracked, look up its **local source repo** from the mapp
 
 #### Source Repo Mapping
 
-| Skill | Local Repo |
-|-------|------------|
-| `handoff` | `~/code/verneagent/handoff` |
-
-For skills not in this table, ask the user where the local repo is. If they provide one, suggest adding it to this table via `/sobit:learn`.
+Maintain a mapping of skill names to their local source repos. If a skill is not in the mapping, ask the user where the local repo is.
 
 #### Sync procedure
 
@@ -68,5 +64,5 @@ For skills not in this table, ask the user where the local repo is. If they prov
 ## Notes
 
 - Always read the skill's SKILL.md before making changes to understand its architecture
-- For handoff skill: installed copy is at `~/.claude/skills/handoff/`, source repo at `~/code/verneagent/handoff/`. File structure may differ between the two — match by filename, not path
+- When syncing to a source repo, file structure may differ between installed copy and source — match by filename, not path
 - Never auto-commit to the source repo. Just copy the files and let the user commit

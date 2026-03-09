@@ -9,7 +9,7 @@ Use this skill when a user wants to standardize repository-level agent instructi
 
 - integrating `CLAUDE.md` and `AGENTS.md`
 - making one file the source of truth
-- adopting the `/Users/dinghaozeng/clover/meadow` pattern
+- adopting a Meadow-style pattern
 - removing duplicated guidance across agent-specific instruction files
 
 ## Goal

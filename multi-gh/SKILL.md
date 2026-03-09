@@ -72,7 +72,7 @@ sed -n '1,220p' ~/.ssh/config
 Interpretation:
 
 - If `ssh-add -l` says `The agent has no identities`, agent-based auth is not active.
-- If `~/.ssh/config` defines `Host dinghao.github.com` with `IdentityFile ~/.ssh/dinghao`, then remotes for that identity should use `git@dinghao.github.com:<owner>/<repo>.git`.
+- If `~/.ssh/config` defines `Host alice.github.com` with `IdentityFile ~/.ssh/alice`, then remotes for that identity should use `git@alice.github.com:<owner>/<repo>.git`.
 - If there is no `Host github.com` entry, generic `git@github.com` may fail even when alias-based SSH works.
 
 ## Step 4: Test The Correct Host
@@ -83,7 +83,7 @@ Test exactly what the remote should use:
 
 ```bash
 ssh -T git@github.com
-ssh -T git@dinghao.github.com
+ssh -T git@alice.github.com
 ```
 
 Expected success output:
@@ -172,27 +172,27 @@ For each repo, the following should be true:
 - `origin` uses the correct SSH alias host for that owner
 - `ssh -T` succeeds for that exact alias host
 
-## Example: dinghaoz
+## Example
 
 If `~/.ssh/config` contains:
 
 ```sshconfig
-Host dinghao.github.com
+Host alice.github.com
     Hostname ssh.github.com
     Port 443
     User git
     IdentitiesOnly yes
-    IdentityFile ~/.ssh/dinghao
+    IdentityFile ~/.ssh/alice
 ```
 
 Then the correct remote form is:
 
 ```bash
-git remote set-url origin git@dinghao.github.com:dinghaoz/<repo>.git
+git remote set-url origin git@alice.github.com:alice/<repo>.git
 ```
 
 And the correct auth test is:
 
 ```bash
-ssh -T git@dinghao.github.com
+ssh -T git@alice.github.com
 ```
