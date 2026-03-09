@@ -1,6 +1,6 @@
 ---
 name: agents-md
-description: Consolidate repository agent instructions by making AGENTS.md the canonical source of truth and reducing CLAUDE.md to a redirect. Use when a user asks to integrate, sync, deduplicate, or adopt a Meadow-style setup for CLAUDE.md and AGENTS.md.
+description: Consolidate repository agent instructions by making AGENTS.md the canonical source of truth and reducing CLAUDE.md to a redirect. Use when a user asks to integrate, sync, deduplicate, or adopt a redirect-based setup for CLAUDE.md and AGENTS.md.
 ---
 
 # Agent Instructions
@@ -9,7 +9,7 @@ Use this skill when a user wants to standardize repository-level agent instructi
 
 - integrating `CLAUDE.md` and `AGENTS.md`
 - making one file the source of truth
-- adopting a Meadow-style pattern
+- adopting a redirect-based pattern
 - removing duplicated guidance across agent-specific instruction files
 
 ## Goal
@@ -28,7 +28,7 @@ In the common case:
 2. Identify which content is shared repo guidance versus tool-specific behavior.
 3. Put the shared, durable guidance in `AGENTS.md`.
 4. Remove duplication so `CLAUDE.md` does not drift from `AGENTS.md`.
-5. If the repo follows the Meadow-style setup, replace `CLAUDE.md` with exactly `@AGENTS.md`.
+5. If the repo follows the redirect-based setup, replace `CLAUDE.md` with exactly `@AGENTS.md`.
 6. Verify that no important instruction was dropped during consolidation.
 
 ## Rules
@@ -44,5 +44,5 @@ In the common case:
 After editing:
 
 - diff `CLAUDE.md` and `AGENTS.md`
-- confirm `CLAUDE.md` is only a redirect when using the Meadow-style pattern
+- confirm `CLAUDE.md` is only a redirect when using the redirect-based pattern
 - check that any previously documented repo rules still exist in `AGENTS.md`

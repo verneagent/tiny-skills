@@ -46,7 +46,16 @@ If the skill is not git-tracked, look up its **local source repo** from the mapp
 
 #### Source Repo Mapping
 
-Maintain a mapping of skill names to their local source repos. If a skill is not in the mapping, ask the user where the local repo is.
+Read `~/.refine-skill/repo-map.json` — a JSON object mapping skill names to local repo paths:
+
+```json
+{
+  "handoff": "~/code/verneagent/handoff",
+  "my-skill": "~/code/my-skill"
+}
+```
+
+If the file doesn't exist or the skill isn't in it, ask the user where the local repo is. When they provide one, save it to the map for future use.
 
 #### Sync procedure
 
