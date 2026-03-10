@@ -1,6 +1,6 @@
 ---
 name: mkwt
-description: Create a new git worktree with a branch from dev.
+description: Create a new git worktree with a branch from the repo's default branch.
 allowed-tools: Bash
 ---
 
@@ -8,7 +8,7 @@ Create a new git worktree and branch.
 
 ## Usage
 
-`/mkwt <name>` — Create a worktree with a new branch `<name>` from `dev`.
+`/mkwt <name>` — Create a worktree with a new branch `<name>` from the repo's default branch (e.g. `main`, `dev`).
 
 The `<name>` argument is required. If not provided, ask the user for a name.
 
@@ -38,7 +38,7 @@ The `<name>` argument is required. If not provided, ask the user for a name.
    If it exists, tell the user and stop.
 
 5. **Confirm** with the user before creating:
-   > Create worktree `<name>` at `<BASE_DIR>/<name>` (new branch from `dev`)?
+   > Create worktree `<name>` at `<BASE_DIR>/<name>` (new branch from `<DEFAULT_BRANCH>`)?
 
 6. **Create** the worktree:
    ```bash
