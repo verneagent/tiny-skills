@@ -18,30 +18,19 @@ A collection of user-level skills for AI coding agents (Claude Code, OpenCode, C
 
 ## Install (global)
 
-Clone the repo and run the fan-out script to symlink all skills into your agent directories:
+Install all skills at once:
 
 ```bash
-git clone https://github.com/verneagent/tiny-skills.git ~/code/verneagent/tiny-skills
-
-# Install all skills
-rsync -a --delete \
-  --exclude='.git/' --exclude='__pycache__/' --exclude='.DS_Store' --exclude='node_modules/' \
-  ~/code/verneagent/tiny-skills/<skill-name>/ ~/.agents/skills/<skill-name>/
-
-# Fan out symlinks to all agent directories
-python3 ~/.agents/skills/adhoc-skill/scripts/fanout.py --all
+npx skills add -g verneagent/tiny-skills
 ```
 
-Or install a single skill:
+Or install a single skill by name:
 
 ```bash
-rsync -a --delete \
-  --exclude='.git/' --exclude='__pycache__/' --exclude='.DS_Store' \
-  ~/code/verneagent/tiny-skills/<skill-name>/ ~/.agents/skills/<skill-name>/
-python3 ~/.agents/skills/adhoc-skill/scripts/fanout.py <skill-name>
+npx skills add -g verneagent/tiny-skills/adhoc-skill
 ```
 
-The fan-out script auto-discovers which agent directories already participate in the `~/.agents/skills/` symlink pattern (e.g., `~/.claude/skills/`, `~/.config/opencode/skills/`, `~/.codex/skills/`).
+This clones the repo, copies skills to `~/.agents/skills/`, and fans out symlinks to all agent directories (`~/.claude/skills/`, `~/.config/opencode/skills/`, `~/.codex/skills/`).
 
 ## Managing skills
 
