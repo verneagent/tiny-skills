@@ -112,6 +112,29 @@ def cmd_pretrust(args):
     return 0
 
 
+def cmd_ensure_skill_permission(args):
+    path = args.path
+    skill = args.skill
+    entry = f"Skill({skill})"
+    settings_path = os.path.join(path, ".claude", "settings.local.json")
+    os.makedirs(os.path.dirname(settings_path), exist_ok=True)
+    data = {}
+    try:
+        with open(settings_path) as f:
+            data = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        data = {}
+    allow = data.setdefault("permissions", {}).setdefault("allow", [])
+    if entry in allow:
+        _jprint({"ok": True, "changed": False})
+        return 0
+    allow.append(entry)
+    with open(settings_path, "w") as f:
+        json.dump(data, f, indent=2)
+    _jprint({"ok": True, "changed": True, "path": settings_path})
+    return 0
+
+
 def build_parser():
     p = argparse.ArgumentParser(description="Workspace operations")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -119,6 +142,11 @@ def build_parser():
     s = sub.add_parser("resolve-spawn-path")
     s.add_argument("--arg", required=True)
     s.set_defaults(func=cmd_resolve_spawn_path)
+
+    s = sub.add_parser("ensure-skill-permission")
+    s.add_argument("--path", required=True)
+    s.add_argument("--skill", required=True)
+    s.set_defaults(func=cmd_ensure_skill_permission)
 
     s = sub.add_parser("pretrust")
     s.add_argument("--path", required=True)

@@ -74,6 +74,16 @@ Present options using AskUserQuestion:
 
 Parse `tool` and `model` from the selected value by splitting on `:` (first part = tool, rest = model).
 
+### Step 3: Ensure handoff skill is allowed
+
+If the user chose to enable handoff, ensure `Skill(handoff)` is in the worktree's `.claude/settings.local.json` permissions so Claude won't prompt for it:
+
+```bash
+python3 ~/.claude/skills/wksp/wksp_ops.py ensure-skill-permission --path '<RESOLVED_PATH>' --skill handoff
+```
+
+This reads `<RESOLVED_PATH>/.claude/settings.local.json` (creating it if needed), checks if `Skill(handoff)` is in `permissions.allow`, and adds it if missing. Must run with `dangerouslyDisableSandbox: true` since the path may be outside the project.
+
 ### Step 4: Pre-trust workspace
 
 ```bash
