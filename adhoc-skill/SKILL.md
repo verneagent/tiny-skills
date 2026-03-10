@@ -1,56 +1,92 @@
 ---
 name: adhoc-skill
-description: Add a new user-level skill quickly. Use when a just-learned workflow should become a reusable skill installed from ~/.agents/skills into the current machine's shared skill fan-out.
+description: Create, refine, or sync user-level skills. Works in the skill's source repo first, then syncs to ~/.agents/skills and fans out symlinks. Use when the user says "create skill", "refine skill", "install skill", "sync skill", "deploy skill", "improve skill", or "fix skill".
+allowed-tools: Bash, Read, Glob, Grep, Edit, Write, Agent
 ---
 
-# Ad Hoc Skill
+# adhoc-skill
 
-Use this skill when a user wants to turn a just-learned workflow into a reusable `user-level` skill.
+Manage user-level skills: create new ones, refine existing ones, or sync from repo to the installed location. All edits happen in the source repo first, then sync one-way to `~/.agents/skills/` and fan out.
 
-Before writing the skill itself, use `skill-creator` and follow its rules.
+## Config
 
-This skill adds only the extra local installation rule for shared `user-level` skills.
+`~/.adhoc-skill/config.json`:
 
-## Scope
+```json
+{
+  "skill_roots": [
+    "~/code/verneagent/tiny-skills",
+    "~/code/verneagent"
+  ]
+}
+```
 
-This applies only to `user-level` skills whose canonical source lives under:
+`skill_roots` — directories to search for skill source repos. Each root is scanned for subdirectories containing `SKILL.md`.
 
-- `~/.agents/skills/<skill-name>/`
+If the config file doesn't exist, ask the user for their skill root directories and create it.
 
-It does not apply to `project-level` skills that should remain inside a project.
+## Finding a skill
 
-## Local Installation Rule
+Search `skill_roots` in order. For each root, look for `<skill-name>/SKILL.md` as a direct child. Match by directory name or by the `name:` field in the SKILL.md frontmatter. First match wins.
 
-Do not hardcode target agents from memory.
+## Operations
 
-Instead, reverse-check the current machine's symlink graph and discover which agent-facing skill directories already consume shared skills from `~/.agents/skills/`.
+### Create (`/adhoc-skill create <name>`)
 
-Install the new skill by mirroring that existing fan-out pattern.
+1. Ask the user: create as an **independent repo** (new git repo under a skill root) or as a **subdirectory** of an existing repo (e.g., `tiny-skills/<name>/`)? If only one root exists or the user specifies, skip asking.
+2. Use `skill-creator` to write the skill content under the chosen location.
+3. If independent repo: `git init` the new directory.
+4. Sync to `~/.agents/skills/<name>/` (see Sync below).
+5. Fan out symlinks.
 
-## Workflow
+### Refine (`/adhoc-skill refine <name> <what to change>`)
 
-1. Use `skill-creator` to create the skill content.
-2. Put the canonical source under `~/.agents/skills/<skill-name>/`.
-3. Run the fan-out script to create symlinks in all agent-facing directories:
+Also triggered implicitly when the user says "improve", "fix", or "refine" a skill.
+
+1. Find the skill source repo using the search logic above.
+2. Read and understand the current implementation.
+3. Make the requested changes **in the source repo**.
+4. Show a diff summary and confirm.
+5. Sync to `~/.agents/skills/<name>/`.
+6. Fan out symlinks.
+
+### Sync (`/adhoc-skill sync <name>`)
+
+Also triggered when the user says "install", "deploy", or "repo2skill".
+
+1. Find the skill source repo.
+2. If already installed at `~/.agents/skills/<name>/`, diff source vs installed and show changes.
+3. Copy source to `~/.agents/skills/<name>/` (excluding `.git/`, `__pycache__/`, `.DS_Store`, `node_modules/`).
+4. Fan out symlinks:
    ```bash
-   python3 ~/.agents/skills/adhoc-skill/scripts/fanout.py <skill-name>
+   python3 ~/.agents/skills/adhoc-skill/scripts/fanout.py <name>
    ```
-4. Verify the output shows all targets succeeded.
 
-## Reverse Check
+### Sync All (`/adhoc-skill sync --all`)
 
-Use the current machine state as the source of truth.
+Scan all skill roots, find every skill, and sync + fan out each one.
 
-A practical way is to inspect likely agent skill roots and keep only symlinks whose real target resolves under `~/.agents/skills/`.
+## Sync procedure
 
-Examples of agent-facing roots on this machine may include:
+```bash
+rsync -a --delete \
+  --exclude='.git/' --exclude='__pycache__/' --exclude='.DS_Store' --exclude='node_modules/' \
+  <source>/ ~/.agents/skills/<name>/
+```
 
-- `~/.codex/skills/`
-- `~/.claude/skills/`
-- `~/.config/opencode/skills/`
+Then fan out:
 
-But the rule is to mirror the discovered shared-skill fan-out, not to blindly assume those paths always apply.
+```bash
+python3 ~/.agents/skills/adhoc-skill/scripts/fanout.py <name>
+```
 
-## Preferred Outcome
+## No args (`/adhoc-skill`)
 
-The skill is written once under `~/.agents/skills/` and exposed everywhere on the current machine that already consumes shared `user-level` skills.
+If invoked with no arguments, list all known skills (scan skill_roots) with their status (installed/not installed, in sync/out of sync).
+
+## Notes
+
+- **One-way only**: repo → `~/.agents/skills/`. Never modify `~/.agents/skills/` directly.
+- **Never auto-commit** to the source repo. Just edit the files and let the user commit.
+- Always read `SKILL.md` before making changes to understand the skill's architecture.
+- The fan-out script discovers targets automatically by checking which agent-facing directories already symlink into `~/.agents/skills/`.
