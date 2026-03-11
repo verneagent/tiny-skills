@@ -125,10 +125,24 @@ def cmd_ensure_skill_permission(args):
     except (FileNotFoundError, json.JSONDecodeError):
         data = {}
     allow = data.setdefault("permissions", {}).setdefault("allow", [])
-    if entry in allow:
+    changed = False
+    if entry not in allow:
+        allow.append(entry)
+        changed = True
+    # For handoff skill: also add Bash wildcard pattern for handoff scripts
+    if skill == "handoff":
+        scripts_dir = os.path.expanduser("~/.claude/skills/handoff/scripts")
+        bash_pattern = f'Bash(python3 "{scripts_dir}/"*)'
+        if bash_pattern not in allow:
+            # Remove old per-script patterns if any
+            old = [p for p in allow if p.startswith("Bash(") and "handoff" in p and "scripts/" in p]
+            for o in old:
+                allow.remove(o)
+            allow.append(bash_pattern)
+            changed = True
+    if not changed:
         _jprint({"ok": True, "changed": False})
         return 0
-    allow.append(entry)
     with open(settings_path, "w") as f:
         json.dump(data, f, indent=2)
     _jprint({"ok": True, "changed": True, "path": settings_path})

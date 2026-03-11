@@ -82,7 +82,7 @@ If the user chose to enable handoff, ensure `Skill(handoff)` is in the worktree'
 python3 ~/.claude/skills/wksp/wksp_ops.py ensure-skill-permission --path '<RESOLVED_PATH>' --skill handoff
 ```
 
-This reads `<RESOLVED_PATH>/.claude/settings.local.json` (creating it if needed), checks if `Skill(handoff)` is in `permissions.allow`, and adds it if missing. Must run with `dangerouslyDisableSandbox: true` since the path may be outside the project.
+This reads `<RESOLVED_PATH>/.claude/settings.local.json` (creating it if needed), checks if `Skill(handoff)` is in `permissions.allow`, and adds it if missing. For the handoff skill, it also adds a `Bash(python3 "<scripts_dir>/"*)` wildcard pattern so all handoff scripts run without manual approval. Must run with `dangerouslyDisableSandbox: true` since the path may be outside the project.
 
 ### Step 4: Pre-trust workspace
 
