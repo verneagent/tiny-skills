@@ -79,6 +79,8 @@ If `~/.lark-share/config.json` doesn't exist:
 
 ### Step 2: Preview and Confirm
 
+**NEVER skip the preview step, even if the user's intent seems clear.** Always present the draft and wait for explicit confirmation before sending.
+
 Present the drafted message to the user:
 
 ```
