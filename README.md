@@ -14,6 +14,7 @@ A collection of user-level skills for AI coding agents (Claude Code, OpenCode, C
 | **multi-gh** | Fix GitHub multi-account workflows — SSH host aliases, `gh` account switching, safe remotes. |
 | **open-file** | Open a local file or directory with a specified app on macOS. |
 | **rmwt** | Remove a git worktree, its branch, and associated handoff resources. |
+| **inscribe** | Capture coding conventions and rules into documentation files. Supports `project` (default) and `global` scope. |
 | **wksp** | Open a new iTerm2 tab with Claude in a worktree or folder. |
 
 ## Install (global)
