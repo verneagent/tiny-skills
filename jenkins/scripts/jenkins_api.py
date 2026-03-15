@@ -22,10 +22,12 @@ import urllib.request
 # Config
 # ---------------------------------------------------------------------------
 
+CONFIG_PATH = os.path.expanduser("~/.config/jenkins.json")
+
+
 def _load_config():
     # Read credentials from ~/.config/jenkins.json (not in repo)
-    config_path = os.path.expanduser("~/.config/jenkins.json")
-    with open(config_path) as f:
+    with open(CONFIG_PATH) as f:
         data = json.load(f)
     url = data["url"]
     # Resolve hostname to IP to bypass ICP blocking
@@ -52,6 +54,61 @@ def _get_crumb(cfg):
     with urllib.request.urlopen(req, timeout=10) as resp:
         data = json.loads(resp.read())
     return data["crumb"]
+
+
+# ---------------------------------------------------------------------------
+# Setup
+# ---------------------------------------------------------------------------
+
+def check_config() -> str:
+    """Check if Jenkins config exists and is valid."""
+    if not os.path.exists(CONFIG_PATH):
+        print("NOT_CONFIGURED")
+        print(f"Config file not found: {CONFIG_PATH}")
+        return ""
+    try:
+        cfg = _load_config()
+        print("CONFIGURED")
+        print(f"URL: {cfg['url']}")
+        print(f"User: {cfg['user']}")
+    except Exception as e:
+        print(f"ERROR: {e}")
+    return ""
+
+
+def init_config() -> str:
+    """Initialize Jenkins config. Reads --url, --user, --token from sys.argv."""
+    url = user = token = None
+    args = sys.argv[2:]
+    i = 0
+    while i < len(args):
+        if args[i] == "--url" and i + 1 < len(args):
+            url = args[i + 1]; i += 2
+        elif args[i] == "--user" and i + 1 < len(args):
+            user = args[i + 1]; i += 2
+        elif args[i] == "--token" and i + 1 < len(args):
+            token = args[i + 1]; i += 2
+        else:
+            i += 1
+    if not all([url, user, token]):
+        print("Usage: jenkins_api.py init --url <URL> --user <USER> --token <TOKEN>")
+        sys.exit(1)
+    # Save config
+    os.makedirs(os.path.dirname(CONFIG_PATH), exist_ok=True)
+    data = {"url": url.rstrip("/"), "user": user, "token": token}
+    with open(CONFIG_PATH, "w") as f:
+        json.dump(data, f, indent=2)
+    # Validate connection
+    try:
+        cfg = _load_config()
+        _get_crumb(cfg)
+        print("SUCCESS: Config saved and connection verified")
+        print(f"Config: {CONFIG_PATH}")
+    except Exception as e:
+        os.remove(CONFIG_PATH)
+        print(f"ERROR: Connection failed — {e}")
+        print("Config was NOT saved. Please check your credentials.")
+    return ""
 
 
 # ---------------------------------------------------------------------------
@@ -173,6 +230,8 @@ lines[start..-1].each {{ println it }}
 # ---------------------------------------------------------------------------
 
 COMMANDS = {
+    "check-config": ("Check if config exists", check_config, []),
+    "init": ("Initialize config (--url, --user, --token)", init_config, []),
     "list": ("List all jobs", list_jobs, []),
     "script": ("Get pipeline script", get_pipeline_script, ["job_name"]),
     "status": ("Get last build status", get_build_status, ["job_name"]),

@@ -16,6 +16,27 @@ Activate when the user mentions Jenkins, CI builds, deployment pipeline, or buil
 
 All script paths are relative to this skill's base directory.
 
+## Setup
+
+Before first use, check if `~/.config/jenkins.json` exists:
+
+```bash
+python3 scripts/jenkins_api.py check-config
+```
+
+If the config is missing, ask the user for:
+1. **Jenkins URL** (e.g., `http://jenkins.example.com:8080`)
+2. **Username** (the Jenkins user with Script Console access)
+3. **API Token** (generated from Jenkins → User → Configure → API Token)
+
+Then save the config:
+
+```bash
+python3 scripts/jenkins_api.py init --url '<URL>' --user '<USER>' --token '<TOKEN>'
+```
+
+The script validates the connection before saving. If it fails, report the error and ask the user to check their credentials.
+
 ## Architecture
 
 Credentials are stored in `~/.config/jenkins.json` (outside any repo):
