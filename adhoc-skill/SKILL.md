@@ -1,6 +1,6 @@
 ---
 name: adhoc-skill
-description: Create, refine, or sync user-level skills. Works in the skill's source repo first, then syncs to ~/.agents/skills and fans out symlinks. Use when the user says "create skill", "refine skill", "install skill", "sync skill", "deploy skill", "improve skill", or "fix skill".
+description: Create, refine, or sync user-level skills. Works in the skill's source repo first, then syncs to ~/.agents/skills and fans out symlinks. Use when the user says "create skill", "refine skill", "install skill", "sync skill", "deploy skill", "improve skill", "fix skill", "edit skill", "simplify skill", "改进 skill", "创建 skill", "编辑 skill", or "简化 skill".
 allowed-tools: Bash, Read, Glob, Grep, Edit, Write, Agent
 ---
 
