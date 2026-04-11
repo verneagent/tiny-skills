@@ -8,8 +8,8 @@ allowed-tools: Bash
 
 Start a Nemo agent on a project directory and connect it to a Lark group.
 
-Nemo runs in the **foreground** — this skill detaches it via `setsid nohup` so
-it survives after the Bash tool call returns. Do **not** rely on nemo
+Nemo runs in the **foreground** — this skill detaches it via `nohup ... & disown`
+so it survives after the Bash tool call returns. Do **not** rely on nemo
 self-daemonizing; it used to, but the env marker it set (`NEMO_FOREGROUND=1`)
 leaked into subprocess env and made nested launches die silently.
 
@@ -24,31 +24,30 @@ leaked into subprocess env and made nested launches die silently.
    - Otherwise use `$PWD`.
    - Verify it exists. If not, tell the user and stop.
 
-2. **Check if nemo is already running** for that directory:
+2. **Launch nemo detached** (the critical part — every piece matters):
    ```bash
-   pgrep -f "nemo.*--project-dir $DIR" >/dev/null && echo RUNNING || echo FREE
-   ```
-   If `RUNNING`, tell the user (with the pid) and stop.
-
-3. **Launch nemo detached** (the critical part — every piece matters):
-   ```bash
-   setsid nohup ~/.local/bin/nemo --project-dir "$DIR" --verbose \
+   nohup ~/.local/bin/nemo --project-dir "$DIR" --verbose \
      </dev/null >/dev/null 2>&1 &
+   pid=$!
    disown
    ```
-   - `setsid` — new session so a pgroup kill at tool-end can't reach it.
-   - `nohup` — ignore SIGHUP.
+   - `nohup` — ignore SIGHUP so the child survives shell / tool teardown.
    - `</dev/null >/dev/null 2>&1` — fully detach the tty/pipe fds; otherwise
      a later write from nemo hits a closed pipe when the Bash tool exits.
-   - `&` + `disown` — background and drop from the shell's job table.
+   - `&` + `disown` — background, drop from the shell's job table, and let
+     the shell exit cleanly so the child gets reparented to PID 1.
+   - Capture `$!` immediately — do not `pgrep` by project-dir afterwards,
+     because multiple nemos may legitimately share the same `--project-dir`
+     as long as they bind different Lark groups.
+
+   (macOS does not ship `setsid`. The `nohup + disown` combo is enough here.)
 
    This command writes outside the project dir (PID file, DB, WebSocket),
    so the tool call needs `dangerouslyDisableSandbox: true`.
 
-4. **Wait ~5 seconds** then verify by reading the log:
+3. **Wait ~5 seconds** then verify by reading the log:
    ```bash
    sleep 5
-   pid=$(pgrep -fn "nemo.*--project-dir $DIR")
    tail -30 ~/.nemo/logs/nemo-$pid.log
    ```
    Look for:
@@ -56,7 +55,7 @@ leaked into subprocess env and made nested launches die silently.
    - `Start card sent` — Lark group greeted
    - `SDK client connected` — coding agent ready
 
-5. **Report** to the user:
+4. **Report** to the user:
    - Directory
    - Chat id (from `Using chat:` / `Claimed group` log line)
    - PID
@@ -72,5 +71,5 @@ leaked into subprocess env and made nested launches die silently.
 | `--model <name>` | Override the model |
 
 Do not pass `--foreground` — the flag was removed. Nemo always runs in
-the foreground, and the `setsid nohup ... &` wrapper above is what
+the foreground, and the `nohup ... & disown` wrapper above is what
 handles detachment.
