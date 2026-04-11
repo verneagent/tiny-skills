@@ -6,7 +6,7 @@ allowed-tools: Bash
 
 # nemo
 
-Start a Nemo agent on a project directory and connect it to a Lark group.
+Start a Nemo agent and connect it to a Lark group.
 
 Nemo runs in the **foreground** — this skill detaches it via `nohup ... & disown`
 so it survives after the Bash tool call returns. Do **not** rely on nemo
@@ -15,18 +15,15 @@ leaked into subprocess env and made nested launches die silently.
 
 ## Usage
 
-`/nemo [path]` — Start nemo on the given directory (default: `$PWD`).
+`/nemo [args...]` — forward `args...` to `nemo`. With no args, nemo uses
+the current working directory and auto-discovers / creates a Lark group.
 
 ## Workflow
 
-1. **Resolve the target directory.**
-   - If `<path>` is provided, expand `~` and use it.
-   - Otherwise use `$PWD`.
-   - Verify it exists. If not, tell the user and stop.
-
-2. **Launch nemo detached** (the critical part — every piece matters):
+1. **Launch nemo detached.** This is the entire launch command — every
+   piece matters:
    ```bash
-   nohup ~/.local/bin/nemo --project-dir "$DIR" --verbose \
+   nohup ~/.local/bin/nemo --verbose <USER_ARGS> \
      </dev/null >/dev/null 2>&1 &
    pid=$!
    disown
@@ -36,16 +33,22 @@ leaked into subprocess env and made nested launches die silently.
      a later write from nemo hits a closed pipe when the Bash tool exits.
    - `&` + `disown` — background, drop from the shell's job table, and let
      the shell exit cleanly so the child gets reparented to PID 1.
-   - Capture `$!` immediately — do not `pgrep` by project-dir afterwards,
+   - Capture `$!` immediately — do not `pgrep` for the pid afterwards,
      because multiple nemos may legitimately share the same `--project-dir`
      as long as they bind different Lark groups.
 
-   (macOS does not ship `setsid`. The `nohup + disown` combo is enough here.)
+   Pass user args through **verbatim**. Do not pre-resolve the target
+   directory, expand `~`, or check `[[ -d ]]` — nemo defaults
+   `--project-dir` to the current working directory and validates the
+   path itself. `cd` into the target dir first if the user specified
+   one, or pass `--project-dir <path>` through.
+
+   macOS does not ship `setsid`. The `nohup + disown` combo is enough.
 
    This command writes outside the project dir (PID file, DB, WebSocket),
    so the tool call needs `dangerouslyDisableSandbox: true`.
 
-3. **Wait ~5 seconds** then verify by reading the log:
+2. **Wait ~5 seconds** then verify via the log:
    ```bash
    sleep 5
    tail -30 ~/.nemo/logs/nemo-$pid.log
@@ -55,16 +58,17 @@ leaked into subprocess env and made nested launches die silently.
    - `Start card sent` — Lark group greeted
    - `SDK client connected` — coding agent ready
 
-4. **Report** to the user:
-   - Directory
+3. **Report** to the user:
+   - Project directory (from `Looking for workspace tag:` log line)
    - Chat id (from `Using chat:` / `Claimed group` log line)
    - PID
    - Whether startup looks healthy
 
-## Options to pass through verbatim
+## Flags the user may want passed through
 
 | Flag | Purpose |
 |------|---------|
+| `--project-dir <path>` | Project directory (default: cwd) |
 | `--chat-name <name>` | Connect to an existing Lark group by name substring |
 | `--chat-id <id>` | Connect to a specific Lark group by ID |
 | `--profile <name>` | Config profile (default: `default`) |
