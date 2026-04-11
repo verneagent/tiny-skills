@@ -48,6 +48,28 @@ the current working directory and auto-discovers / creates a Lark group.
    This command writes outside the project dir (PID file, DB, WebSocket),
    so the tool call needs `dangerouslyDisableSandbox: true`.
 
+   **Launching on a remote host via ssh.** Wrap the same launch command in
+   a single-quoted remote string, escape `$!` so the remote shell expands
+   it, and pass `--project-dir` explicitly (the remote cwd isn't what the
+   user means):
+   ```bash
+   ssh -i <key> <user>@<host> "nohup ~/.local/bin/nemo --verbose <USER_ARGS> \
+     --project-dir <ABS_REMOTE_PATH> \
+     </dev/null >/dev/null 2>&1 & disown; echo pid=\$!"
+   ```
+   Notes:
+   - `</dev/null >/dev/null 2>&1` is **required** — without it ssh hangs
+     waiting for the detached child's stdout/stderr to close.
+   - `disown` goes after `&` on the same line (remote shell is
+     non-interactive; semicolon form is safest).
+   - Capture the PID from the `echo pid=…` line, then check the log
+     with a second `ssh ... "tail ~/.nemo/logs/nemo-<pid>.log"` —
+     don't chain `sleep && tail` into the same ssh call, it sometimes
+     wedges. Run as two separate ssh calls.
+   - Do **not** `cd` before the command; pass `--project-dir` instead.
+     `cd` is relative to the remote user's home, which rarely matches
+     intent and silently resolves to the wrong project.
+
 2. **Wait ~5 seconds** then verify via the log:
    ```bash
    sleep 5
