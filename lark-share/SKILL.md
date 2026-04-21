@@ -55,7 +55,7 @@ If `~/.lark-share/config.json` doesn't exist:
 ### Step 1: Research and Draft
 
 1. Research the subject — use web search, codebase context, or your own knowledge as appropriate.
-2. Draft a lark_md formatted message. Structure it as:
+2. Draft a CommonMark markdown message (Card v2). Structure it as:
    - A brief intro (1–2 sentences on why this matters)
    - Key points or tips (use bold, bullet lists, code snippets as needed)
    - A practical example or takeaway
@@ -63,19 +63,27 @@ If `~/.lark-share/config.json` doesn't exist:
 **Style rules:**
 - Keep the message concise but informative — aim for 5–15 lines of markdown.
 - Focus on practical, actionable insights the team can use immediately.
-- Use lark_md syntax (not GitHub-flavored markdown).
+- Use Card v2 markdown syntax (CommonMark with Lark extensions).
 - **Title style**: Don't use boring titles like "详解" or "Guide". Use attention-grabbing titles — pose a question, highlight a benefit or pain point. Add emoji to make titles pop. Examples: "🤔 你想减少 84% 的权限弹窗吗？", "😤 Git push 老报错？可能是 sandbox 的锅", "⚡ 一个配置让 Claude 自动执行命令".
 - **Body must not repeat title**: The card header already shows the title. Start the body directly with the intro.
 - **Language**: Follow the `language` config. If `zh`, all content must be in Chinese (even if the user describes the topic in English). If `en`, use English.
 
-**lark_md syntax notes:**
+**Card v2 markdown syntax (CommonMark + Lark extensions):**
 - Bold: `**text**`
 - Italic: `*text*`
 - Strikethrough: `~~text~~`
+- Headings: `# H1` through `###### H6`
+- Ordered list: `1. item` (4 spaces for nesting)
+- Unordered list: `- item` (4 spaces for nesting)
+- Code block: ` ```language\ncode\n``` ` (supports 60+ languages)
+- Inline code: `` `code` ``
 - Links: `[text](url)`
-- Code: `` `inline` `` (no multiline code blocks — use single-line code per line if needed)
-- Line breaks: `\n`
+- Blockquote: `> quoted text`
+- Horizontal rule: `---`
+- Table: standard markdown table syntax (max 5 data rows per page)
+- Colored text: `<font color='red'>text</font>` (supports color names and RGBA)
 - Mentions: `<at id=all>everyone</at>`
+- Line breaks: `\n`
 
 ### Step 2: Preview and Confirm
 
@@ -107,7 +115,9 @@ python3 $LARK_SHARE_SCRIPTS/lark_webhook.py "<message>" --title "<title>" --colo
 The script reads the webhook token from config automatically.
 
 Optional flags:
-- `--image <path>` — Attach an image (can be used multiple times). Requires handoff skill for image upload; skipped if not installed.
+- `--image <path>` — Attach an image (can be used multiple times). Uses `~/.lark-suite/config.json` credentials for upload.
+
+To control where images appear in the card, insert `---IMG---` as a marker in the message text. The image will be placed at that position as a standalone `img` element between two markdown sections. If no marker is present, images are appended at the end.
 
 Report the result to the user.
 
