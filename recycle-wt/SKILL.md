@@ -36,11 +36,16 @@ a. **Uncommitted changes:**
 b. **Branch content not in main:**
    ```bash
    git -C $WORKTREE_PATH fetch origin $DEFAULT_BRANCH
-   git -C $WORKTREE_PATH diff origin/$DEFAULT_BRANCH...$OLD_BRANCH --stat
+   git -C $WORKTREE_PATH diff origin/$DEFAULT_BRANCH..$OLD_BRANCH -- $(git -C $WORKTREE_PATH diff origin/$DEFAULT_BRANCH...$OLD_BRANCH --name-only) --stat
    ```
    If non-empty → stop with error: "Branch has changes not in main. Merge or discard them first."
 
-   Note: `git log main..branch` does NOT work here — after squash merge the original commits still appear because their SHAs differ from the squashed commit on main. `git diff --stat` compares actual code content, which correctly shows empty after squash merge.
+   **Pitfall — three-dot vs two-dot diff after squash merge:**
+   - `git log main..branch` — WRONG. After squash merge the original commits still exist (different SHAs), so this always shows them.
+   - `git diff main...branch` (three dots) — ALSO WRONG. Three-dot diff compares branch against the merge-base (fork point), not against current main. After squash merge, the merge-base is still the old fork point, so the diff shows the branch's changes even though main already has them.
+   - `git diff main..branch` (two dots) — CORRECT. Two-dot diff compares the actual trees at both tips. If main already contains the same content (via squash merge), the diff is empty for those files.
+
+   The command above scopes the two-dot diff to only the files the branch touched (via `--name-only` from three-dot), so unrelated main changes don't cause false positives.
 
 c. **New branch name already exists:**
    ```bash
