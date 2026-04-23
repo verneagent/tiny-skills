@@ -6,6 +6,12 @@ allowed-tools: Bash
 
 Recycle an existing worktree whose branch has been merged, repurposing it for new work without the overhead of `rmwt` + `mkwt`.
 
+## Skill Path
+
+```bash
+RECYCLE_WT_SCRIPTS=$(python3 -c "import os; p='.claude/skills/recycle-wt/scripts'; print(os.path.abspath(p) if os.path.isdir(p) else os.path.expanduser('~/.agents/skills/recycle-wt/scripts'))")
+```
+
 ## Usage
 
 `/recycle-wt <new-name>` — Recycle the current (or specified) worktree with a new branch name.
@@ -16,77 +22,20 @@ If `<new-name>` is not provided, ask the user.
 
 ## Workflow
 
-### 1. Resolve the worktree
+### 1. Resolve arguments
 
-If inside a secondary worktree (not the main repo), use the current directory. Otherwise, run `git worktree list` and match `<worktree>` against paths (case-insensitive). If no match or multiple matches, list them and ask.
+- If two args: first is worktree identifier, second is new name.
+  - Run `git worktree list` and match the first arg against paths (case-insensitive basename match). If no match or multiple matches, list them and ask.
+  - Use the matched worktree path.
+- If one arg: use current directory as worktree path, arg is new name.
+- If no args: ask the user.
 
-Record:
-- `WORKTREE_PATH` — the absolute path
-- `OLD_BRANCH` — from the brackets in `git worktree list` output
-- `DEFAULT_BRANCH` — detect via: `git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@'`
-
-### 2. Safety checks
-
-a. **Uncommitted changes:**
-   ```bash
-   git -C $WORKTREE_PATH status --porcelain
-   ```
-   If non-empty → stop with error: "Worktree has uncommitted changes. Commit, stash, or discard them first."
-
-b. **Branch content not in main:**
-   ```bash
-   git -C $WORKTREE_PATH fetch origin $DEFAULT_BRANCH
-   git -C $WORKTREE_PATH diff origin/$DEFAULT_BRANCH..$OLD_BRANCH -- $(git -C $WORKTREE_PATH diff origin/$DEFAULT_BRANCH...$OLD_BRANCH --name-only) --stat
-   ```
-   If non-empty → stop with error: "Branch has changes not in main. Merge or discard them first."
-
-   **Pitfall — three-dot vs two-dot diff after squash merge:**
-   - `git log main..branch` — WRONG. After squash merge the original commits still exist (different SHAs), so this always shows them.
-   - `git diff main...branch` (three dots) — ALSO WRONG. Three-dot diff compares branch against the merge-base (fork point), not against current main. After squash merge, the merge-base is still the old fork point, so the diff shows the branch's changes even though main already has them.
-   - `git diff main..branch` (two dots) — CORRECT. Two-dot diff compares the actual trees at both tips. If main already contains the same content (via squash merge), the diff is empty for those files.
-
-   The command above scopes the two-dot diff to only the files the branch touched (via `--name-only` from three-dot), so unrelated main changes don't cause false positives.
-
-c. **New branch name already exists:**
-   ```bash
-   result=$(git branch --list <new-name>); if [ -n "$result" ]; then echo "EXISTS"; else echo "FREE"; fi
-   ```
-   Check **output**, not exit code (`git branch --list` always exits 0). If EXISTS → stop.
-
-### 3. Delete old remote branch (tolerant)
+### 2. Run the script
 
 ```bash
-git push origin --delete $OLD_BRANCH 2>/dev/null || true
+bash $RECYCLE_WT_SCRIPTS/recycle_wt.sh <new-name> <worktree-path>
 ```
 
-PR auto-delete may have already removed it — ignore errors.
+This requires `dangerouslyDisableSandbox: true` since it pushes to remote.
 
-### 4. Rename local branch
-
-```bash
-git -C $WORKTREE_PATH branch -m $OLD_BRANCH <new-name>
-```
-
-### 5. Hard-reset to latest main
-
-**Must use `--hard`.** A soft reset leaves the worktree out of sync (files stay at the old commit's version).
-
-```bash
-git -C $WORKTREE_PATH fetch origin $DEFAULT_BRANCH
-git -C $WORKTREE_PATH reset --hard origin/$DEFAULT_BRANCH
-```
-
-### 6. Push new branch to remote
-
-```bash
-git -C $WORKTREE_PATH push -u origin <new-name>
-```
-
-This requires `dangerouslyDisableSandbox: true` since it writes to the network.
-
-### 7. Print result
-
-> Recycled worktree at `<WORKTREE_PATH>`:
-> - Branch: `<OLD_BRANCH>` → `<new-name>`
-> - Aligned with `origin/<DEFAULT_BRANCH>` at `<short-sha>`
-> - Remote: pushed `<new-name>`
+The script handles all safety checks, branch operations, and prints the result. If it exits non-zero, report the error to the user.
