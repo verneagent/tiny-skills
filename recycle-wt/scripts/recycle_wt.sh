@@ -35,16 +35,35 @@ if [ -n "$(git -C "$WORKTREE_PATH" status --porcelain)" ]; then
   exit 1
 fi
 
-# --- Safety: branch content not in main ---
+# --- Safety: branch has unmerged commits ---
+# Check commits on the branch not reachable from main. For squash-merged
+# branches the commit hashes differ, so we match by commit subject line
+# (GitHub squash merge preserves the PR title, optionally appending " (#N)").
 git -C "$WORKTREE_PATH" fetch origin "$DEFAULT_BRANCH" --quiet
-TOUCHED_FILES=$(git -C "$WORKTREE_PATH" diff "origin/$DEFAULT_BRANCH...$OLD_BRANCH" --name-only)
-if [ -n "$TOUCHED_FILES" ]; then
-  DIFF_STAT=$(git -C "$WORKTREE_PATH" diff "origin/$DEFAULT_BRANCH..$OLD_BRANCH" -- $TOUCHED_FILES --stat)
-  if [ -n "$DIFF_STAT" ]; then
-    echo "ERROR: Branch has changes not in $DEFAULT_BRANCH:" >&2
-    echo "$DIFF_STAT" >&2
+BRANCH_COMMITS=$(git -C "$WORKTREE_PATH" log "origin/$DEFAULT_BRANCH..$OLD_BRANCH" --format='%H')
+
+if [ -n "$BRANCH_COMMITS" ]; then
+  UNMERGED=""
+  while IFS= read -r sha; do
+    [ -z "$sha" ] && continue
+    SUBJECT=$(git -C "$WORKTREE_PATH" log -1 --format='%s' "$sha")
+    # Search main for a commit whose subject starts with the same text
+    # (squash merge may append " (#123)")
+    MATCH=$(git -C "$WORKTREE_PATH" log "origin/$DEFAULT_BRANCH" --format='%s' --fixed-strings --grep="$SUBJECT" -1)
+    if [ -z "$MATCH" ]; then
+      UNMERGED="${UNMERGED}  $(git -C "$WORKTREE_PATH" log -1 --oneline "$sha")\n"
+    fi
+  done <<< "$BRANCH_COMMITS"
+
+  if [ -n "$UNMERGED" ]; then
+    echo "ERROR: Branch has commits not found in $DEFAULT_BRANCH:" >&2
+    echo -e "$UNMERGED" >&2
+    echo "" >&2
+    echo "If these were squash-merged under a different title, reset first:" >&2
+    echo "  git reset --hard origin/$DEFAULT_BRANCH" >&2
     exit 1
   fi
+  echo "All branch commits found in $DEFAULT_BRANCH (squash-merged). Safe to recycle."
 fi
 
 # --- Safety: new branch name already exists ---
