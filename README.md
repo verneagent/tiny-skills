@@ -8,7 +8,11 @@ A collection of user-level skills for AI coding agents (Claude Code, OpenCode, C
 |-------|-------------|
 | **adhoc-skill** | Create, refine, or sync user-level skills. All edits in repo first, then sync to `~/.agents/skills/` and fan out. |
 | **agents-md** | Consolidate `AGENTS.md` as canonical source of truth, reduce `CLAUDE.md` to a redirect. |
+| **ci-ssh** | SSH connection details and utilities for CI machines. |
+| **claude-review** | Multi-round code review with optional review army of specialist sub-agents. |
+| **codex-review** | Multi-round code review loop between Claude and OpenAI Codex. |
 | **genimg** | Generate or edit images via OpenAI-compatible APIs. Text-to-image and image-to-image. |
+| **jenkins** | Manage Jenkins CI servers via the Groovy Script Console API. |
 | **lark-share** | Send knowledge-sharing cards to a Lark group via webhook. |
 | **mkwt** | Create a new git worktree with a branch from the repo's default branch. |
 | **multi-gh** | Fix GitHub multi-account workflows — SSH host aliases, `gh` account switching, safe remotes. |
@@ -17,6 +21,11 @@ A collection of user-level skills for AI coding agents (Claude Code, OpenCode, C
 | **rmwt** | Remove a git worktree, its branch, and associated handoff resources. |
 | **inscribe** | Capture coding conventions and rules into documentation files. Supports `project` (default) and `global` scope. |
 | **wksp** | Open a new iTerm2 tab with Claude in a worktree or folder. |
+| **nemo** | Start a Nemo (Lark-connected coding agent) daemon on a directory. |
+| **nemo-restart** | Restart a running Nemo daemon while preserving session context. |
+| **netmap** | Show all network interfaces, LAN neighbors, and Tailscale peers. |
+| **network-debug** | Systematic home network speed diagnosis. WiFi PHY, channel congestion, physical placement, TP-Link API. |
+| **posthog** | Query PostHog analytics — funnels, trends, insights, HogQL. |
 
 ## Install (global)
 
