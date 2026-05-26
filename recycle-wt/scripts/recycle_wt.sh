@@ -39,8 +39,13 @@ fi
 # Check commits on the branch not reachable from main. For squash-merged
 # branches the commit hashes differ, so we match by commit subject line
 # (GitHub squash merge preserves the PR title, optionally appending " (#N)").
+# Skip merge commits (--no-merges): sync-merge commits created by
+# `git merge origin/main` to keep the branch up to date have subjects
+# like "Merge remote-tracking branch 'origin/main' into <branch>" that
+# never appear in main, so they would falsely trip the unmerged check.
+# Merge commits introduce no work of their own — they're safe to skip.
 git -C "$WORKTREE_PATH" fetch origin "$DEFAULT_BRANCH" --quiet
-BRANCH_COMMITS=$(git -C "$WORKTREE_PATH" log "origin/$DEFAULT_BRANCH..$OLD_BRANCH" --format='%H')
+BRANCH_COMMITS=$(git -C "$WORKTREE_PATH" log "origin/$DEFAULT_BRANCH..$OLD_BRANCH" --no-merges --format='%H')
 
 if [ -n "$BRANCH_COMMITS" ]; then
   UNMERGED=""
