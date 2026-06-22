@@ -1,6 +1,6 @@
 ---
 name: rmwt
-description: Remove a git worktree, its branch, and associated handoff resources.
+description: Remove a git worktree, its branch, and its dedicated iOS simulator.
 allowed-tools: Bash, Read, Glob
 ---
 
@@ -16,7 +16,8 @@ RMWT_SCRIPTS=$(python3 -c "import os; p='.claude/skills/rmwt/scripts'; print(os.
 
 ## Usage
 
-`/rmwt <name>` — Remove worktree, branch, all handoff chat groups for that workspace, and all handoff database buckets for that project.
+`/rmwt <name>` — Remove the worktree, its branch, and its dedicated per-worktree
+iOS simulator.
 
 The `<name>` argument is required. If not provided, list worktrees and ask the user to pick one.
 
@@ -30,21 +31,14 @@ The `<name>` argument is required. If not provided, list worktrees and ask the u
 
    b. **Branch name** — from `git worktree list` output (shown in brackets).
 
-   c. **Handoff chat groups (all for workspace)** — list all bot-owned groups tagged with the workspace (computed from worktree path):
+   c. **Dedicated simulator** — the per-worktree sim a project's `scripts/sim-id.sh`
+      creates (named `vf-<basename>-<hash>`). Resolve it (runs `xcrun simctl`, so
+      use `dangerouslyDisableSandbox: true`):
       ```bash
-      python3 $RMWT_SCRIPTS/list_workspace_groups.py '<WORKTREE_PATH>'
+      python3 $RMWT_SCRIPTS/worktree_sim.py '<WORKTREE_PATH>'
       ```
-      This MUST run with `dangerouslyDisableSandbox: true` in Claude Code since it calls the Lark API. If handoff is not installed, this step is skipped.
-
-   d. **Handoff database directory** — check if it exists:
-      ```bash
-      python3 -c "
-      import os
-      project = '<WORKTREE_PATH>'.replace('/', '-')
-      print(os.path.join(os.path.expanduser('~/.handoff/projects'), project))
-      "
-      ```
-      Then check whether that directory exists. If it exists, it may contain multiple bucket DBs (`default`, named profiles, `path-*`).
+      It prints `{"name": ..., "udids": [...]}`. An empty `udids` means none exists
+      (the worktree never created one) — skip this part of the cleanup.
 
 3. **Safety checks** — before showing the summary, check for uncommitted work:
 
@@ -61,38 +55,31 @@ The `<name>` argument is required. If not provided, list worktrees and ask the u
       ```
       If output is non-empty, warn the user: "This branch has N commit(s) not merged into <default_branch>."
 
-   c. **Active handoff sessions in target project DBs** — if `<PROJECT_HANDOFF_DIR>` exists, inspect every `handoff-data.db` file under it and sum `sessions` row counts. If non-zero, warn the user that the target workspace still has active handoff sessions and removing it will disconnect them.
-
     Include warnings in the summary (step 4) only when they are material to the user's decision. Use `🚨` only when there is real code-loss risk (for example unmerged commits or uncommitted work). If there is no code-loss risk, do not show warning signs; use a green check (for example `✅`) for safe status.
 
 4. **Show summary** and confirm with the user before proceeding:
    > Removing worktree `<name>`:
    > - Worktree: `<path>`
    > - Branch: `<branch>`
-   > - Chat groups: `<N>` found for workspace (or "none found" / "skipped — handoff not installed")
-   > - Handoff DB dir: `<project_handoff_dir>` (or "none found")
+   > - Simulator: `<sim-name>` (`<N>` udid(s)) (or "none found")
    >
    > Proceed?
 
 5. **Execute** cleanup in order:
 
-   a. **Dissolve chat groups** (if any found):
+   a. **Delete the dedicated simulator** (for each udid found in step 2c):
       ```bash
-      python3 $RMWT_SCRIPTS/dissolve_groups.py '<GROUPS_JSON>'
+      xcrun simctl delete <UDID>
       ```
-      This MUST run with `dangerouslyDisableSandbox: true` in Claude Code since it calls the Lark API.
+      Runs `xcrun simctl`, so use `dangerouslyDisableSandbox: true`. `simctl delete`
+      shuts the sim down first if it is booted.
 
-   b. **Delete handoff project DB directory** (if found):
-      ```bash
-      rm -rf <PROJECT_HANDOFF_DIR>
-      ```
-
-   c. **Remove worktree**:
+   b. **Remove worktree**:
       ```bash
       git worktree remove <WORKTREE_PATH>
       ```
 
-   d. **Delete branch**:
+   c. **Delete branch**:
       ```bash
       git branch -d <BRANCH_NAME>
       ```
@@ -109,6 +96,6 @@ python3 $RMWT_SCRIPTS/test_rmwt.py
 ```
 
 The test suite verifies:
-- Workspace ID calculation for different worktrees
-- JSON output format from `list_workspace_groups.py`
-- **Critical**: Workspace IDs are unique for different paths (prevents accidental deletion of wrong groups)
+- The sim name matches the `scripts/sim-id.sh` convention (`vf-<basename>-<hash>`)
+- A trailing slash on the path does not change the name
+- **Critical**: sim names are unique for different paths (prevents accidental deletion of the wrong sim)
