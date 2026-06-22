@@ -25,10 +25,20 @@ As of the `deactivate` no-delete refactor, the DB `sessions` row survives clean 
 CHAT_ID=oc_...                                        # from user or pid dir
 PID=$(cat ~/.nemo/pids/$CHAT_ID.pid)
 PROJECT_DIR=$(lsof -p $PID 2>/dev/null | awk '$4=="cwd"{print $NF}')
-ORIGINAL_ARGS=$(ps -p $PID -o args= | sed 's/.*nemo //')
+# `-ww` prevents argv truncation. `-o args=` truncates to terminal width
+# and drops trailing flags like `--model deepseek-v4-pro[1m]`.
+ORIGINAL_ARGS=$(ps -ww -p $PID -o command= | sed 's/.*nemo //')
 ```
 
 If the user only says "restart nemo" without naming a chat, list `~/.nemo/pids/*.pid` and ask which one — don't guess.
+
+**Sanity-check the args before reusing them.** A daemon launched on an old captain-nemo may have flags the current install dropped (e.g., `--base-url` / `--api-key-env` were folded into `--model <preset>` in 0.3.84). If a daemon you're restarting is older than the installed version, dry-run argparse first:
+
+```bash
+/Users/.../local/bin/nemo $ORIGINAL_ARGS --version 2>&1 | tail -3
+```
+
+`unrecognized arguments` → you must rewrite `$ORIGINAL_ARGS` before relaunching. Common migration: `--base-url <X> --api-key-env <Y> --model <remote_id>` → `--model <preset_name>`. **Beware**: in `ps`, the visible `--model` value of an old `--base-url`-style daemon is the *remote model id* (e.g., `deepseek-v4-pro[1m]`), NOT a preset name. Don't pass it to the new scheme verbatim — see step 6's preset-resolution check.
 
 ### 1.5. Pre-flight: is the daemon running stale code?
 
@@ -94,6 +104,38 @@ Interpretation:
 | Fresh | Stale | No restart needed for behavior, but **reinstall metadata** (`pip install -e . --break-system-packages`) so the next start card shows the right version. Active daemon's in-memory `__version__` remains stale until its own restart. |
 | Stale | Stale | Reinstall metadata first, **then** restart — otherwise the new daemon will also import the stale dist-info and keep lying about its version. |
 
+#### Sub-gotcha: legacy editable artifacts shadow the new install
+
+After running `pip install -e . --break-system-packages`, the new daemon may still die at startup with:
+
+```
+ImportError: cannot import name '__version__' from 'nemo' (unknown location)
+```
+
+The "(unknown location)" hint means Python found `nemo` as a **namespace package** — a directory with no `__init__.py` — instead of the editable install. Trigger:
+
+- captain-nemo used to be packaged as `nemo` (pre-rename). An old `pip install -e .` from that era wrote `__editable__.nemo-0.1.0.pth` and a real `site-packages/nemo/codex_sidecar/` subdir
+- `pip uninstall captain-nemo` doesn't touch that legacy install (different package name)
+- When the daemon's cwd ≠ source repo, the `site-packages/nemo/` directory wins resolution as a namespace package; the editable `.pth` finder is shadowed
+
+Reproduction:
+
+```bash
+cd <some_dir_that_isnt_the_nemo_source_repo>
+python3 -c "import nemo; print(nemo.__file__)"
+# If this prints `None` (namespace package), you have the bug
+```
+
+Fix:
+
+```bash
+rm -rf /opt/homebrew/lib/python3.14/site-packages/nemo
+rm -f  /opt/homebrew/lib/python3.14/site-packages/__editable__.nemo-0.1.0.pth
+rm -f  /opt/homebrew/lib/python3.14/site-packages/__editable___nemo_0_1_0_finder.py
+```
+
+Then re-verify import resolves to the source `__init__.py`. Only relevant on machines that had captain-nemo installed before the rename — newer hosts won't have these files.
+
 After the restart succeeds (step 6), sanity-check that the new PID actually has the new code. A fresh import is sufficient evidence since the new daemon is reached through the same `sys.path`:
 
 ```bash
@@ -154,19 +196,31 @@ disown
 NEW_PID=$!
 ```
 
-### 6. Verify resume happened
+### 6. Verify resume + preset + WS
 
 ```bash
 sleep 3
 tail -30 ~/.nemo/logs/nemo-$NEW_PID.log
 ```
 
-Must see both lines:
+Required lines (resume case — sessions row had a prior id):
 
-- `Cleaning stale session <uuid> (sdk=<prefix>)` — old row found
+- `Cleaning stale session <uuid> (sdk[<provider>]=<prefix>)` — old row found
 - `Resuming SDK session <prefix>` — resume id handed to the agent
 
 If either is missing, resume did NOT happen. Do not declare success.
+
+Required line **when `--model <preset>` was passed**:
+
+- `Resolved preset <name> → endpoint=<url> model=<remote_id>`
+
+**Missing this line is silent corruption**: the SDK is sending the literal string you passed (e.g., `deepseek-v4-pro[1m]`) to the default Anthropic endpoint as a model id. Turns complete with `cost=0.0000`, the chat looks alive, but every reply is `There's an issue with the selected model (...). It may not exist or you may not have access to it.` `--model` accepts the **preset name** (e.g., `deepseek-v4-pro`), not the remote id (e.g., `deepseek-v4-pro[1m]`). Inspect available presets: `python -c "from nemo.presets import load_presets; print(list(load_presets()))"`.
+
+Required line for relay-mode daemons (most deployments):
+
+- `WS connected to relay`
+
+If the log loops `WS error, reconnecting in 3s: did not receive a valid HTTP response from proxy` instead, the host has `HTTP_PROXY` / `HTTPS_PROXY` / `ALL_PROXY` set (e.g., ClashX) and the daemon is on captain-nemo `<= 0.3.98`. Upgrade to `>= 0.3.99` (which passes `proxy=None` to `websockets.connect`).
 
 ## Orphan cleanup
 
@@ -180,6 +234,16 @@ from nemo import relay; relay.release_heartbeat('<orphan_chat_id>')"
 
 Dissolving the orphan Lark group itself is a manual step — it requires bot permissions and is usually not worth automating.
 
+## Bulk restart (rolling out a new version)
+
+When deploying a fix that affects every daemon (e.g. the 0.3.99 WS proxy fix), do it in one batch instead of one-by-one:
+
+1. **Snapshot every PID file's args** to `/tmp/nemo-restart-snap/before.txt`, one line per chat: `chat|pid|cwd|args`. Use `ps -ww -p $pid -o command=` (not `-o args=`).
+2. **SIGTERM all**, sleep 8s, then `kill -9` stragglers. SIGKILL is safe — `deactivate`-no-delete (≥ 0.3.70) preserves session rows. Most daemons in the middle of a turn will need SIGKILL; that's fine.
+3. **Loop over the snapshot to relaunch.** Always re-add `--chat-id $chat` even if the original args didn't have it — without it, the new daemon does workspace discovery and may land on the wrong chat (or claim a fresh one).
+4. **Verify each new daemon** against step 6: alive, PID file matches, `WS connected`, and `Resolved preset` if a preset was passed. **WS-connected without preset-resolved looks alive but every reply is a "model not found" error** — easy to miss without checking the preset line.
+5. **If some daemons fail to start** with no log file written, suspect args incompatibility. Run `nemo $ORIGINAL_ARGS --version` from the snapshot to see which flags the new captain-nemo no longer accepts, rewrite, retry just those.
+
 ## Reporting back
 
 Tell the user:
@@ -187,5 +251,7 @@ Tell the user:
 - `sdk_session_id` prefix that was resumed (from the log line)
 - Chat ID
 - Whether the "Resuming SDK session" log line was observed
+- Whether `Resolved preset` appeared (when `--model <preset>` was passed)
+- Whether `WS connected to relay` appeared
 
 Do **not** report "restarted" without confirming step 6.
